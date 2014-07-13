@@ -7,13 +7,9 @@
 
 var Twit = require('twit');
 var async = require('async');
+var auth = require('./auth.json');
 
-var T = new Twit({
-    consumer_key:         ''
-  , consumer_secret:      ''
-  , access_token:         ''
-  , access_token_secret:  ''
-})
+var T = new Twit(auth);
 
 async.parallel({
     mentioners: function(callback){
@@ -21,35 +17,37 @@ async.parallel({
         callback(err, mentions)
       });
     },
-    listMembers: function(callback){../../../../../../Xcode
+    listMembers: function(callback){
       T.get('lists/members', { list_id: 144638216}, function(err, members, response) {
          callback(err, members.users);
       });
     }
 }, function(err, results) {
 
-  console.log('[debug] Number of mentions to process: ' + results.mentioners.length)
-
-  results.mentioners.forEach(function(mention) {
-            
-      //is this a registration, very simple test!
-      if (mention.text.indexOf('register') !== -1){
+  if (!err) {
+    console.log('[debug] Number of mentions to process: ' + results.mentioners.length)
+  
+    results.mentioners.forEach(function(mention) {
+              
+        //is this a registration, very simple test!
+        if (mention.text.indexOf('register') !== -1){
+          
+          var result = false;
+          
+          //find if requested member is already in list
+          results.listMembers.some(function(member){
+              return result = (member.screen_name == mention.user.screen_name);
+          });
         
-        var result = false;
-        
-        //find if requested member is already in list
-        results.listMembers.some(function(member){
-            return result = (member.screen_name == mention.user.screen_name);
-        });
-      
-        //if not, add them.
-        if (result == false) {
-          console.log('[action] add ' + mention.user.screen_name + ' too list');
+          //if not, add them.
+          if (result == false) {
+            console.log('[action] add ' + mention.user.screen_name + ' too list');
+          } else {
+            console.log('[action] do nothing, ' + mention.user.screen_name + ' is in list already');  
+          }
         } else {
-          console.log('[action] do nothing, ' + mention.user.screen_name + ' is in list already');  
+          console.log('[action] discard mention by ' + mention.user.screen_name + ', not a registration');
         }
-      } else {
-        console.log('[action] discard mention by ' + mention.user.screen_name + ', not a registration');
-      }
-  });
+    });
+  }
 });
